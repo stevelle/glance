@@ -52,6 +52,7 @@ from glance.db.sqlalchemy.metadef_api import tag as metadef_tag_api
 from glance.db.sqlalchemy import models
 from glance import i18n
 
+
 BASE = models.BASE
 sa_logger = None
 LOG = logging.getLogger(__name__)
@@ -470,6 +471,14 @@ def _make_conditions_from_filters(filters, is_public=None):
                 image_conditions.append(getattr(models.Image, key) >= v)
             if k.endswith('_max'):
                 image_conditions.append(getattr(models.Image, key) <= v)
+        elif k in ['created_at', 'updated_at']:
+            attr_value = getattr(models.Image, key)
+            operator, isotime = utils.split_filter_op(filters.pop(k))
+            parsed_time = timeutils.parse_isotime(isotime)
+            threshold = timeutils.normalize_time(parsed_time)
+            comparison = utils.evaluate_filter_op(attr_value, operator,
+                                                  threshold)
+            image_conditions.append(comparison)
 
     for (k, v) in filters.items():
         value = filters.pop(k)
