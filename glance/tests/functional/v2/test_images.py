@@ -18,6 +18,7 @@ import signal
 import uuid
 
 from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 import requests
 import six
 # NOTE(jokke): simplified transition to py3, behaves like py2 xrange
@@ -2387,6 +2388,25 @@ class TestImages(functional.FunctionalTest):
         self.assertEqual(7, len(body['images']))
         self.assertEqual('/v2/images', body['first'])
         self.assertNotIn('next', jsonutils.loads(response.text))
+
+        # Image list filters by created_at time
+        anchor = timeutils.parse_isotime(images[0]['created_at'])
+        url_template = '/v2/images?created_at=lt:%s'
+        path = self._url(url_template % anchor)
+        response = requests.get(path, headers=self._headers())
+        self.assertEqual(200, response.status_code)
+        body = jsonutils.loads(response.text)
+        self.assertEqual(0, len(body['images']))
+        self.assertEqual('/v2/images', body['first'])
+
+        # Image list filters by updated_at time
+        url_template = '/v2/images?created_at=lt:%s'
+        path = self._url(url_template % images[2]['updated_at'])
+        response = requests.get(path, headers=self._headers())
+        self.assertEqual(200, response.status_code)
+        body = jsonutils.loads(response.text)
+        self.assertEqual(0, len(body['images']))
+        self.assertEqual('/v2/images', body['first'])
 
         # Begin pagination after the first image
         template_url = ('/v2/images?limit=2&sort_dir=asc&sort_key=name'
