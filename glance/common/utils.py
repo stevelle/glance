@@ -740,3 +740,55 @@ def stash_conf_values():
     conf['cert_file'] = CONF.cert_file
 
     return conf
+
+
+def split_filter_op(expression):
+    """
+    Split operator from value in an expression.
+    Designed for use on a comparative-filtering query field.
+    When no operator is found, default to an equality comparison.
+
+    :param expression: the expression to parse
+
+    :returns a tuple (operator, value) parsed from expression
+    """
+    split = expression.split(':', 1)  # Split at most once
+    try:
+        op, value = split
+    except ValueError:  # Too few values to unpack
+        op = 'eq'
+        value = expression
+
+    # NOTE stevelle decoding escaped values may be needed later
+    return op, value
+
+
+def evaluate_filter_op(value, operator, threshold):
+    """
+    Evaluate a comparison operator.
+    Designed for use on a comparative-filtering query field.
+
+    :param value: evaluated against the operator, as left side of expression
+    :param operator: any supported filter operation
+    :param threshold: to compare value against, as right side of expression
+
+    :raises InvalidFilterOperatorValue if an unknown operator is provided
+
+    :returns boolean result of applied comparison
+
+    """
+    if operator == 'gt':
+        return value > threshold
+    if operator == 'gte':
+        return value >= threshold
+    if operator == 'lt':
+        return value < threshold
+    if operator == 'lte':
+        return value <= threshold
+    if operator == 'neq':
+        return value != threshold
+    if operator == 'eq':
+        return value == threshold
+
+    msg = _("Unable to filter on a unknown operator.")
+    raise exception.InvalidFilterOperatorValue(msg)
