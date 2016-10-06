@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    Please note a change in Scrubber's behaviour in case
+    of job fetching errors:
+
+    * If configured to work in daemon mode, Scrubber
+      will exit with status zero.
+    * If configured to work in non-daemon mode, Scrubber
+      will error out at run time.

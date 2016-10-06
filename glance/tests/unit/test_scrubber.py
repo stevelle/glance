@@ -22,6 +22,7 @@ from oslo_config import cfg
 # NOTE(jokke): simplified transition to py3, behaves like py2 xrange
 from six.moves import range
 
+from glance.common import exception
 from glance import scrubber
 from glance.tests import utils as test_utils
 
@@ -109,6 +110,23 @@ class TestScrubber(test_utils.BaseTestCase):
         self.mox.ReplayAll()
         scrub._scrub_image(id, [(id, '-', uri)])
         self.mox.VerifyAll()
+
+    def test_scrubber_exits(self):
+        # Checks for Scrubber exits when it is not able to fetch jobs from
+        # the queue
+        uri = 'file://some/path/%s' % uuid.uuid4()
+        id = 'helloworldid'
+
+        scrub = scrubber.Scrubber(glance_store)
+        scrub.registry = self.mox.CreateMockAnything()
+        scrub.registry.get_image(id).AndReturn({'status': 'pending_delete'})
+        scrub.registry.update_image(id, {'status': 'deleted'})
+        self.mox.StubOutWithMock(glance_store, "delete_from_backend")
+        ex = glance_store.GlanceStoreException()
+        glance_store.delete_from_backend(uri, mox.IgnoreArg()).AndRaise(ex)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.FailedToGetScrubberJobs,
+                          scrub._get_delete_jobs)
 
 
 class TestScrubDBQueue(test_utils.BaseTestCase):
